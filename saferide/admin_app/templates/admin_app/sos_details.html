@@ -1,0 +1,14 @@
+{% extends "admin_app/base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h3>SOS Details</h3>
+    <table class="table table-bordered">
+        <tr><th>ID</th><td>{{ sos.id }}</td></tr>
+        <tr><th>Status</th><td>{{ sos.status }}</td></tr>
+        <tr><th>Time</th><td>{{ sos.timestamp }}</td></tr>
+        <tr><th>User</th><td>{{ sos.user.username }}</td></tr>
+        <tr><th>Location</th><td>{{ sos.location }}</td></tr>
+    </table>
+    <a href="{% url 'guardian_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+{% endblock %}

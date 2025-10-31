@@ -1,0 +1,65 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3>Your Active Ride</h3>
+                </div>
+                <div class="card-body">
+                    {% if active_ride %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Vehicle Number:</strong> {{ active_ride.vehicle_number }}</p>
+                            <p><strong>Vehicle Type:</strong> {{ active_ride.vehicle_type }}</p>
+                            <p><strong>Source:</strong> {{ active_ride.source }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Destination:</strong> {{ active_ride.destination }}</p>
+                            <p><strong>Start Time:</strong> {{ active_ride.start_time }}</p>
+                            <p><strong>Status:</strong> Active</p>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <button class="btn btn-danger" id="triggerSos">Trigger SOS</button>
+                    </div>
+                    {% else %}
+                    <div class="text-center">
+                        <p>You don't have any active rides.</p>
+                        <a href="{% url 'start_ride' %}" class="btn btn-primary">Start New Ride</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('triggerSos').addEventListener('click', function() {
+    fetch("{% url 'trigger_sos' %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.status === 'success') {
+            // Use the specific SOS ID returned from the backend
+            window.location.href = `{% url 'sos_status' 0 %}`.replace('0', data.sos_id);
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while triggering SOS');
+    });
+});
+</script>
+{% endblock %}

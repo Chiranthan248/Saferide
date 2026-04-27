@@ -72,7 +72,3 @@ Follow these steps to get your development environment running:
 8. **Access the application:**
    Open your web browser and navigate to `http://127.0.0.1:8000/`. 
    You can access the admin portal at `http://127.0.0.1:8000/admin/`.
-
-## License
-
-This project is open-sourced under the MIT license.

@@ -1,0 +1,52 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h3>SOS Alert Status</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h4 class="alert-heading">Emergency Alert Activated!</h4>
+                        <p>Help is on the way. Please stay calm.</p>
+                    </div>
+                    
+                    <div class="sos-details">
+                        <p><strong>Request Time:</strong> {{ sos.timestamp }}</p>
+                        <p><strong>Location:</strong> {{ sos.location }}</p>
+                        <p><strong>Status:</strong> 
+                            <span class="badge badge-danger">Pending</span>
+                        </p>
+                        <p><strong>Vehicle Number:</strong> {{ sos.ride.vehicle_number }}</p>
+                    </div>
+                    
+                    <div class="emergency-contacts mt-4">
+                        <h5>Emergency Contacts</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item">Police: 100</li>
+                            <li class="list-group-item">Ambulance: 108</li>
+                            <li class="list-group-item">Your Contact: {{ sos.ride.commuter.emergency_contact }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function fetchSosStatus() {
+        fetch("{% url 'sos_status' sos_id=sos.id %}?ajax=1")
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('sos-status-text').innerText = data.status;
+            });
+    }
+
+    setInterval(fetchSosStatus, 5000); // every 5 seconds
+    fetchSosStatus(); // call immediately too
+</script>
+
+{% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header bg-primary text-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0"><i class="fas fa-car me-2"></i>Start New Ride</h3>
+                        <span class="badge bg-light text-primary fs-6">Step 1 of 2</span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="rideForm">
+                        {% csrf_token %}
+                        
+                        <!-- Vehicle Information Section -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3"><i class="fas fa-car-side me-2"></i>Vehicle Details</h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" 
+                                               placeholder="DL01AB1234" required>
+                                        <label for="vehicle_number">Vehicle Number</label>
+                                        <small class="form-text text-muted">e.g. DL01AB1234</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <select class="form-select" id="vehicle_type" name="vehicle_type" required>
+                                            <option value="" selected disabled>Select Vehicle Type</option>
+                                            <option value="Car">Car</option>
+                                            <option value="Bike">Bike</option>
+                                            <option value="Auto">Auto Rickshaw</option>
+                                            <option value="Taxi">Taxi</option>
+                                            <option value="Bus">Bus</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                        <label for="vehicle_type">Vehicle Type</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Journey Information Section -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3"><i class="fas fa-route me-2"></i>Journey Details</h5>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control" id="source" name="source" 
+                                               placeholder="Starting point" required>
+                                        <label for="source">Source</label>
+                                        <small class="form-text text-muted">Current location</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control" id="destination" name="destination" 
+                                               placeholder="Destination" required>
+                                        <label for="destination">Destination</label>
+                                        <small class="form-text text-muted">Where are you going?</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="useCurrentLocation">
+                                    <i class="fas fa-location-arrow me-1"></i>Use Current Location
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Safety Options -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3"><i class="fas fa-shield-alt me-2"></i>Safety Options</h5>
+                            
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="shareLocation" name="share_location" checked>
+                                <label class="form-check-label" for="shareLocation">
+                                    Share real-time location with emergency contacts
+                                </label>
+                            </div>
+                            
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoCheckIn" name="auto_checkin">
+                                <label class="form-check-label" for="autoCheckIn">
+                                    Enable automatic safety check-ins
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url 'user_dashboard' %}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-play me-1"></i> Start Ride
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Safety Tips Card -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-body">
+                    <h5 class="card-title text-primary"><i class="fas fa-lightbulb me-2"></i>Safety Tips</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item border-0 py-2"><i class="fas fa-check-circle text-success me-2"></i>Verify your driver's details before boarding</li>
+                        <li class="list-group-item border-0 py-2"><i class="fas fa-check-circle text-success me-2"></i>Share your ride details with trusted contacts</li>
+                        <li class="list-group-item border-0 py-2"><i class="fas fa-check-circle text-success me-2"></i>Keep the SOS button accessible during your ride</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Current location functionality
+    document.getElementById('useCurrentLocation').addEventListener('click', function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                // In a real app, you would reverse geocode to get address
+                document.getElementById('source').value = "Current Location";
+                // You could also store lat/lng in hidden fields
+            }, function(error) {
+                alert("Unable to get your location. Please enter manually.");
+            });
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    });
+
+    // Form validation
+    document.getElementById('rideForm').addEventListener('submit', function(e) {
+        const vehicleNumber = document.getElementById('vehicle_number').value;
+        if (!/^[A-Za-z]{2}\d{1,2}[A-Za-z]{0,2}\d{1,4}$/.test(vehicleNumber)) {
+            alert('Please enter a valid vehicle number (e.g. DL01AB1234)');
+            e.preventDefault();
+        }
+    });
+</script>
+{% endblock %}

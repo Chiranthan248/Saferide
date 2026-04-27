@@ -1,6 +1,6 @@
 # SafeRide - Women's Safety Web Application
 
-SafeRide is a comprehensive web application built with Django designed to enhance personal safety during commutes. It includes proactive safety tools, background location tracking, and an emergency SOS system to ensure users have access to help when they need it most.
+SafeRide is a full-featured web app made with Django that aims to make commuting safer for women. It has background location tracking, proactive safety tools, and an emergency SOS system to make sure users can get help when they need it most.
 
 ## Features
 
@@ -73,6 +73,8 @@ Follow these steps to get your development environment running:
    Open your web browser and navigate to `http://127.0.0.1:8000/`. 
    You can access the admin portal at `http://127.0.0.1:8000/admin/`.
 
-## License
+## Website preview 
 
-This project is open-sourced under the MIT license.
+![Home Screen](assets/home.png)
+
+![User Interface](assets/ui.png)

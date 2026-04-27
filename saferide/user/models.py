@@ -21,6 +21,11 @@ class RideDetails(models.Model):
     destination = models.CharField(max_length=100)
     start_time = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)  # Trip in progress
+    
+    # Live Tracking Fields
+    current_lat = models.FloatField(null=True, blank=True)
+    current_lng = models.FloatField(null=True, blank=True)
+    last_updated = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.commuter.user.username} - {self.vehicle_number}"

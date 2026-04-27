@@ -77,15 +77,8 @@ WSGI_APPLICATION = 'saferide.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'saferide1_db',       # Database name (create it first in MySQL Workbench)
-        'USER': 'root',             # Default MySQL username
-        'PASSWORD': 'mysql', # Your MySQL root password (leave empty if none)
-        'HOST': 'localhost',        # Or '127.0.0.1'
-        'PORT': '3307',             # Default MySQL port
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",  # Avoid MySQL warnings
-        }
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

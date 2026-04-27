@@ -28,7 +28,7 @@
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Login</button>
+                            <button type="submit" class="btn btn-primary" onclick="this.innerHTML='<span class=\'spinner-border spinner-border-sm\' role=\'status\' aria-hidden=\'true\'></span> Logging in...'; this.form.submit(); this.disabled=true;">Login</button>
                         </div>
                     </form>
                     

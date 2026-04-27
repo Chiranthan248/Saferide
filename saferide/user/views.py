@@ -48,7 +48,18 @@ def register(request):
 # User Dashboard (Active Rides)
 @login_required
 def user_dashboard(request):
-    commuter = Commuter.objects.get(user=request.user)
+    try:
+        # Check if a Commuter profile exists for this user
+        commuter = Commuter.objects.get(user=request.user)
+    except Commuter.DoesNotExist:
+        # Auto-create the commuter profile for superusers or users without one to make the app foolproof
+        commuter = Commuter.objects.create(
+            user=request.user, 
+            phone="0000000000", 
+            emergency_contact="0000000000", 
+            address="Not specified"
+        )
+        
     active_ride = RideDetails.objects.filter(commuter=commuter, is_active=True).first()
     return render(request, 'user/dashboard.html', {'active_ride': active_ride})
 
@@ -57,16 +68,21 @@ def user_dashboard(request):
 
 @login_required
 def start_ride(request):
-    if request.method == 'POST':
+    try:
         commuter = Commuter.objects.get(user=request.user)
+    except Commuter.DoesNotExist:
+        commuter = Commuter.objects.create(
+            user=request.user, phone="0000000000", emergency_contact="0000000000", address="Not specified"
+        )
         
+    if request.method == 'POST':
         # Deactivate all previous rides for this commuter
         RideDetails.objects.filter(commuter=commuter, is_active=True).update(is_active=False)
         
-        vehicle_number = request.POST.get('vehicle_number')
-        vehicle_type = request.POST.get('vehicle_type')
-        source = request.POST.get('source')
-        destination = request.POST.get('destination')
+        vehicle_number = request.POST.get('vehicle_number', 'Unknown')
+        vehicle_type = request.POST.get('vehicle_type', 'Unknown')
+        source = request.POST.get('source', '')
+        destination = request.POST.get('destination', '')
 
         # Create new active ride
         new_ride = RideDetails.objects.create(
@@ -156,12 +172,44 @@ def sos_status_by_id(request, sos_id):
             'error': 'Commuter profile not found.'
         })
 
+@login_required
+def update_location(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            lat = data.get('lat')
+            lng = data.get('lng')
+
+            if lat and lng:
+                try:
+                    commuter = Commuter.objects.get(user=request.user)
+                except Commuter.DoesNotExist:
+                    commuter = Commuter.objects.create(
+                        user=request.user, phone="0000000000", emergency_contact="0000000000", address="Not specified"
+                    )
+                
+                active_ride = RideDetails.objects.filter(commuter=commuter, is_active=True).first()
+                if active_ride:
+                    active_ride.current_lat = float(lat)
+                    active_ride.current_lng = float(lng)
+                    active_ride.save()
+                    return JsonResponse({'status': 'success'})
+                return JsonResponse({'status': 'error', 'message': 'No active ride'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'invalid request'})
+
 # Also, let's improve the trigger_sos view to ensure it uses the correct active ride
 @login_required
 def trigger_sos(request):
     if request.method == 'POST':
         try:
-            commuter = Commuter.objects.get(user=request.user)
+            try:
+                commuter = Commuter.objects.get(user=request.user)
+            except Commuter.DoesNotExist:
+                commuter = Commuter.objects.create(
+                    user=request.user, phone="0000000000", emergency_contact="0000000000", address="Not specified"
+                )
             
             # Get the most recent active ride for this commuter
             active_ride = RideDetails.objects.filter(

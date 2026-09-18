@@ -1,0 +1,285 @@
+{% extends "admin_app/base.html" %}
+{% load tz %}
+{% block content %}
+<style>
+    .sos-detail-page { padding: 1.5rem 0 3rem; }
+
+    .back-link {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        color: #64748b; font-size: 0.85rem; font-weight: 500;
+        text-decoration: none; margin-bottom: 1.25rem;
+        transition: color 0.2s;
+    }
+    .back-link:hover { color: var(--primary-color); }
+
+    .sos-header {
+        display: flex; justify-content: space-between; align-items: flex-start;
+        margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;
+    }
+    .sos-header h2 { font-weight: 800; font-size: 1.4rem; color: #1e293b; margin: 0; }
+    .sos-header .sos-id { font-size: 0.82rem; color: #94a3b8; margin-top: 0.15rem; }
+
+    .status-badge {
+        padding: 0.4rem 1rem; border-radius: 50px;
+        font-weight: 700; font-size: 0.82rem; text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .badge-accepted { background: #d1e7dd; color: #0f5132; }
+    .badge-declined { background: #f8d7da; color: #842029; }
+    .badge-resolved { background: #e2e3e5; color: #41464b; }
+
+    .detail-card {
+        background: white; border: 1px solid #e2e8f0;
+        border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem;
+    }
+    .detail-card-title {
+        font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 0.5rem;
+    }
+    .detail-card-title i { color: var(--primary-color); }
+
+    .detail-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0.6rem 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-size: 0.85rem; color: #64748b; }
+    .detail-value { font-size: 0.92rem; font-weight: 600; color: #1e293b; }
+
+    .action-bar {
+        display: flex; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .action-bar .btn { padding: 0.6rem 1.25rem; font-weight: 600; border-radius: 8px; }
+
+    #sosDetailMap { height: 250px; border-radius: 10px; margin-top: 1rem; }
+
+    .timeline-item {
+        display: flex; align-items: flex-start; gap: 0.75rem;
+        padding: 0.6rem 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        margin-top: 5px; flex-shrink: 0;
+    }
+    .dot-pending { background: #fbbf24; }
+    .dot-accepted { background: #34d399; }
+    .dot-resolved { background: #94a3b8; }
+</style>
+
+<div class="sos-detail-page">
+    <a href="{% url 'guardian_dashboard' %}" class="back-link">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+
+    <!-- Header -->
+    <div class="sos-header">
+        <div>
+            <h2><i class="fas fa-exclamation-triangle text-danger me-2"></i>SOS Alert Details</h2>
+            <div class="sos-id">Request #{{ sos.id }} · {{ sos.timestamp|localtime|date:"d M Y, h:i A" }}</div>
+        </div>
+        <span class="status-badge
+            {% if sos.status == 'Pending' %}badge-pending
+            {% elif sos.status == 'Accepted' %}badge-accepted
+            {% elif sos.status == 'Declined' %}badge-declined
+            {% else %}badge-resolved{% endif %}">
+            {{ sos.status }}
+        </span>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-7">
+            <!-- Commuter Info -->
+            <div class="detail-card">
+                <div class="detail-card-title"><i class="fas fa-user"></i> Commuter Information</div>
+                <div class="detail-row">
+                    <span class="detail-label">Name</span>
+                    <span class="detail-value">{{ sos.ride.commuter.user.get_full_name|default:sos.ride.commuter.user.username }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Phone</span>
+                    <span class="detail-value">
+                        <a href="tel:{{ sos.ride.commuter.phone }}" class="text-primary text-decoration-none">
+                            <i class="fas fa-phone me-1"></i>{{ sos.ride.commuter.phone }}
+                        </a>
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Emergency Contact</span>
+                    <span class="detail-value">
+                        <a href="tel:{{ sos.ride.commuter.emergency_contact }}" class="text-danger text-decoration-none">
+                            <i class="fas fa-heart-pulse me-1"></i>{{ sos.ride.commuter.emergency_contact }}
+                        </a>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Ride Info -->
+            <div class="detail-card">
+                <div class="detail-card-title"><i class="fas fa-car"></i> Ride Details</div>
+                <div class="detail-row">
+                    <span class="detail-label">Route</span>
+                    <span class="detail-value">{{ sos.ride.source }} → {{ sos.ride.destination }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Vehicle</span>
+                    <span class="detail-value">{{ sos.ride.vehicle_type }} · {{ sos.ride.vehicle_number }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Started</span>
+                    <span class="detail-value">{{ sos.ride.start_time|localtime|date:"d M Y, h:i A" }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Last Known Location</span>
+                    <span class="detail-value">
+                        {% if sos.ride.current_lat and sos.ride.current_lng %}
+                            {{ sos.ride.current_lat|floatformat:4 }}, {{ sos.ride.current_lng|floatformat:4 }}
+                        {% else %}
+                            {{ sos.location|default:"Unknown" }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Map -->
+            {% if sos.ride.current_lat and sos.ride.current_lng %}
+            <div class="detail-card">
+                <div class="detail-card-title"><i class="fas fa-map-marker-alt"></i> Last Known Position</div>
+                <div id="sosDetailMap"></div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-5">
+            <!-- Actions -->
+            {% if sos.status == 'Pending' %}
+            <div class="detail-card">
+                <div class="detail-card-title"><i class="fas fa-bolt"></i> Actions Required</div>
+                <p class="text-muted small mb-3">This SOS is awaiting a response. Please act promptly.</p>
+                <div class="action-bar">
+                    <form method="POST" action="{% url 'accept_sos' sos.id %}" style="flex:1;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100" aria-label="Accept SOS request">
+                            <i class="fas fa-check me-1"></i>Accept
+                        </button>
+                    </form>
+                    <form method="POST" action="{% url 'decline_sos' sos.id %}" style="flex:1;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger w-100" aria-label="Decline SOS request">
+                            <i class="fas fa-times me-1"></i>Decline
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% elif sos.status == 'Accepted' %}
+            <div class="detail-card">
+                <div class="detail-card-title"><i class="fas fa-shield-alt"></i> Response In Progress</div>
+                <p class="text-muted small mb-3">You have accepted this SOS. Mark as resolved when the situation is handled.</p>
+                <button class="btn btn-primary w-100" id="resolveBtn" aria-label="Mark SOS as resolved">
+                    <i class="fas fa-check-double me-1"></i>Mark as Resolved
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- Timeline -->
+            <div class="detail-card">
+                <div class="detail-card-title"><i class="fas fa-clock"></i> Timeline</div>
+                <div class="timeline-item">
+                    <div class="timeline-dot dot-pending"></div>
+                    <div>
+                        <div class="detail-value" style="font-size:0.85rem;">SOS Triggered</div>
+                        <small class="text-muted">{{ sos.timestamp|localtime|date:"d M Y, h:i:s A" }}</small>
+                    </div>
+                </div>
+                {% if sos.status == 'Accepted' or sos.status == 'Resolved' %}
+                <div class="timeline-item">
+                    <div class="timeline-dot dot-accepted"></div>
+                    <div>
+                        <div class="detail-value" style="font-size:0.85rem;">Accepted by {{ sos.guardian.user.username|default:"Guardian" }}</div>
+                        <small class="text-muted">Response received</small>
+                    </div>
+                </div>
+                {% endif %}
+                {% if sos.status == 'Resolved' %}
+                <div class="timeline-item">
+                    <div class="timeline-dot dot-resolved"></div>
+                    <div>
+                        <div class="detail-value" style="font-size:0.85rem;">Resolved</div>
+                        <small class="text-muted">Situation handled safely</small>
+                    </div>
+                </div>
+                {% endif %}
+                {% if sos.status == 'Declined' %}
+                <div class="timeline-item">
+                    <div class="timeline-dot" style="background:#ef4444;"></div>
+                    <div>
+                        <div class="detail-value" style="font-size:0.85rem;">Declined</div>
+                        <small class="text-muted">Request was declined</small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Notes -->
+            {% if sos.notes %}
+            <div class="detail-card">
+                <div class="detail-card-title"><i class="fas fa-sticky-note"></i> Notes</div>
+                <p class="text-muted" style="font-size:0.9rem;">{{ sos.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet for Map -->
+{% if sos.ride.current_lat and sos.ride.current_lng %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const lat = {{ sos.ride.current_lat }};
+    const lng = {{ sos.ride.current_lng }};
+    const map = L.map('sosDetailMap').setView([lat, lng], 15);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+    L.marker([lat, lng]).addTo(map)
+        .bindPopup('<strong>{{ sos.ride.commuter.user.username }}</strong><br>Last known location')
+        .openPopup();
+</script>
+{% endif %}
+
+<!-- Resolve via AJAX -->
+{% if sos.status == 'Accepted' %}
+<script>
+document.getElementById('resolveBtn')?.addEventListener('click', function() {
+    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Resolving...';
+    this.disabled = true;
+    const self = this;
+
+    fetch("{% url 'resolve_sos' sos.id %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || 'Could not resolve.');
+            self.innerHTML = '<i class="fas fa-check-double me-1"></i>Mark as Resolved';
+            self.disabled = false;
+        }
+    })
+    .catch(() => {
+        alert('Network error.');
+        self.innerHTML = '<i class="fas fa-check-double me-1"></i>Mark as Resolved';
+        self.disabled = false;
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

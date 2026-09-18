@@ -1,0 +1,137 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<style>
+    .contacts-page { padding: 1.5rem 0 4rem; max-width: 640px; }
+    .contacts-header { margin-bottom: 1.75rem; }
+    .contacts-header h2 { font-weight: 800; font-size: 1.5rem; color: #1e293b; margin: 0 0 0.25rem; }
+    .contacts-header .subtitle { color: #64748b; font-size: 0.88rem; }
+
+    .contact-card {
+        background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+        padding: 1rem 1.25rem; margin-bottom: 0.75rem;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .contact-left { display: flex; align-items: center; gap: 1rem; }
+    .contact-avatar {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: #dbeafe; color: #1d4ed8;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem; flex-shrink: 0;
+    }
+    .contact-name { font-weight: 600; color: #1e293b; font-size: 0.95rem; }
+    .contact-detail { font-size: 0.8rem; color: #64748b; }
+
+    .contact-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+    .add-form {
+        background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+        padding: 1.5rem; margin-top: 1.25rem;
+    }
+    .add-form h5 { font-weight: 700; font-size: 0.95rem; color: #1e293b; margin-bottom: 1rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .add-form label { font-weight: 600; font-size: 0.78rem; color: #475569; margin-bottom: 0.25rem; display: block; }
+    .add-form input, .add-form select {
+        width: 100%; padding: 0.6rem 0.8rem; border: 1.5px solid #e2e8f0;
+        border-radius: 8px; font-size: 0.88rem; font-family: inherit;
+        background: #f8fafc; transition: border-color 0.2s;
+    }
+    .add-form input:focus, .add-form select:focus { border-color: #2563eb; background: white; outline: none; }
+
+    .limit-note { text-align: center; color: #94a3b8; font-size: 0.82rem; margin-top: 1rem; }
+</style>
+
+<div class="contacts-page">
+    <div class="contacts-header">
+        <h2><i class="fas fa-user-group me-2 text-primary"></i>Trusted Contacts</h2>
+        <div class="subtitle">These people are alerted when you trigger SOS. (Max 3)</div>
+    </div>
+
+    <!-- Existing primary emergency contact -->
+    <div class="contact-card" style="border-left: 3px solid #2563eb;">
+        <div class="contact-left">
+            <div class="contact-avatar"><i class="fas fa-star"></i></div>
+            <div>
+                <div class="contact-name">Primary Emergency Contact</div>
+                <div class="contact-detail"><i class="fas fa-phone me-1"></i>{{ commuter.emergency_contact }}</div>
+            </div>
+        </div>
+        <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:0.72rem;">Primary</span>
+    </div>
+
+    <!-- Trusted contacts list -->
+    {% for contact in contacts %}
+    <div class="contact-card">
+        <div class="contact-left">
+            <div class="contact-avatar"><i class="fas fa-user"></i></div>
+            <div>
+                <div class="contact-name">{{ contact.name }}</div>
+                <div class="contact-detail">
+                    <i class="fas fa-phone me-1"></i>{{ contact.phone }}
+                    · <i class="fas fa-heart me-1"></i>{{ contact.relationship }}
+                </div>
+            </div>
+        </div>
+        <form method="POST" style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="contact_id" value="{{ contact.id }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Remove {{ contact.name }}">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </form>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted py-3" style="font-size:0.88rem;">
+        <i class="fas fa-user-plus me-1"></i> No trusted contacts added yet.
+    </div>
+    {% endfor %}
+
+    <!-- Add contact form -->
+    {% if can_add %}
+    <div class="add-form">
+        <h5><i class="fas fa-plus-circle me-1 text-primary"></i>Add Trusted Contact</h5>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add">
+            <div class="form-row">
+                <div>
+                    <label for="contact_name">Full Name</label>
+                    <input type="text" name="contact_name" id="contact_name" placeholder="e.g. Priya Sharma" required>
+                </div>
+                <div>
+                    <label for="contact_phone">Phone Number</label>
+                    <input type="tel" name="contact_phone" id="contact_phone" placeholder="+91 XXXXXXXXXX" required>
+                </div>
+            </div>
+            <div class="form-row full">
+                <div>
+                    <label for="contact_relationship">Relationship</label>
+                    <select name="contact_relationship" id="contact_relationship">
+                        <option value="Parent">Parent</option>
+                        <option value="Spouse">Spouse</option>
+                        <option value="Sibling">Sibling</option>
+                        <option value="Friend">Friend</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 mt-2">
+                <i class="fas fa-plus me-1"></i>Add Contact
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="limit-note">
+        <i class="fas fa-info-circle me-1"></i>Maximum 3 trusted contacts reached.
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-3">
+        <a href="{% url 'user_dashboard' %}" class="text-primary small fw-semibold text-decoration-none">
+            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'user/base.html' %}
+{% load tz %}
+
+{% block content %}
+<style>
+    .history-page { padding: 1.5rem 0 4rem; }
+    .history-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 1.75rem;
+    }
+    .history-header h2 { font-weight: 800; font-size: 1.5rem; color: #1e293b; margin: 0; }
+    .history-header .subtitle { color: #64748b; font-size: 0.88rem; margin-top: 0.25rem; }
+
+    .ride-card {
+        background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+        padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+        transition: box-shadow 0.2s, transform 0.15s;
+    }
+    .ride-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-2px); }
+
+    .ride-route {
+        font-weight: 700; font-size: 1.05rem; color: #1e293b;
+        display: flex; align-items: center; gap: 0.5rem;
+    }
+    .ride-route .arrow { color: #94a3b8; }
+
+    .ride-meta {
+        display: flex; flex-wrap: wrap; gap: 1.25rem; margin-top: 0.75rem;
+        font-size: 0.82rem; color: #64748b;
+    }
+    .ride-meta span { display: flex; align-items: center; gap: 0.35rem; }
+    .ride-meta i { width: 14px; text-align: center; }
+
+    .badge-active { background: #dcfce7; color: #166534; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.65rem; border-radius: 50px; }
+    .badge-ended { background: #f1f5f9; color: #475569; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.65rem; border-radius: 50px; }
+    .badge-sos { background: #fef2f2; color: #b91c1c; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.65rem; border-radius: 50px; }
+    .badge-incident { background: #fef9c3; color: #854d0e; font-weight: 600; font-size: 0.72rem; padding: 0.2rem 0.65rem; border-radius: 50px; }
+
+    .stats-row {
+        display: flex; gap: 0.5rem; margin-top: 0.6rem;
+    }
+
+    .empty-state {
+        text-align: center; padding: 4rem 2rem; color: #94a3b8;
+    }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
+    .empty-state h4 { color: #475569; margin-bottom: 0.5rem; }
+</style>
+
+<div class="history-page">
+    <div class="history-header">
+        <div>
+            <h2><i class="fas fa-history me-2 text-primary"></i>Trip History</h2>
+            <div class="subtitle">{{ rides|length }} total ride{{ rides|length|pluralize }}</div>
+        </div>
+        <a href="{% url 'start_ride' %}" class="btn btn-primary btn-sm" aria-label="Start a new ride">
+            <i class="fas fa-plus me-1"></i>New Ride
+        </a>
+    </div>
+
+    {% if rides %}
+        {% for ride in rides %}
+        <div class="ride-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="ride-route">
+                    {{ ride.source }} <span class="arrow"><i class="fas fa-arrow-right"></i></span> {{ ride.destination }}
+                </div>
+                {% if ride.is_active %}
+                    <span class="badge-active"><i class="fas fa-circle fa-xs me-1"></i>Active</span>
+                {% else %}
+                    <span class="badge-ended">Ended</span>
+                {% endif %}
+            </div>
+            <div class="ride-meta">
+                <span><i class="fas fa-car"></i>{{ ride.vehicle_type }} · {{ ride.vehicle_number }}</span>
+                <span><i class="far fa-calendar"></i>{{ ride.start_time|localtime|date:"d M Y, h:i A" }}</span>
+                {% if ride.end_time %}
+                    <span><i class="far fa-clock"></i>Ended {{ ride.end_time|localtime|date:"h:i A" }}</span>
+                {% endif %}
+            </div>
+            <div class="stats-row">
+                {% if ride.sos_count > 0 %}
+                    <span class="badge-sos"><i class="fas fa-bell me-1"></i>{{ ride.sos_count }} SOS</span>
+                {% endif %}
+                {% if ride.incident_count > 0 %}
+                    <span class="badge-incident"><i class="fas fa-triangle-exclamation me-1"></i>{{ ride.incident_count }} Incident{{ ride.incident_count|pluralize }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <i class="fas fa-route"></i>
+            <h4>No rides yet</h4>
+            <p>Start your first ride to see your trip history here.</p>
+            <a href="{% url 'start_ride' %}" class="btn btn-primary mt-2">
+                <i class="fas fa-car me-1"></i>Start a Ride
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

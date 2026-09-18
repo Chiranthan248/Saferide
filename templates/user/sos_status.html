@@ -1,0 +1,324 @@
+{% extends 'user/base.html' %}
+{% load tz %}
+
+{% block content %}
+<style>
+    /* ── SOS Status Page ─────────────────────────────── */
+    .sos-page { padding: 2rem 0 4rem; }
+
+    .sos-alert-banner {
+        background: #e53e3e;
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        margin-bottom: 1.75rem;
+        animation: bangPulse 2s infinite;
+    }
+    @keyframes bangPulse {
+        0%,100% { box-shadow: 0 0 0 0 rgba(229,62,62,0.5); }
+        50%      { box-shadow: 0 0 0 16px rgba(229,62,62,0); }
+    }
+    .sos-alert-banner .sos-icon { font-size: 2.5rem; flex-shrink: 0; }
+    .sos-alert-banner h2 { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.25rem; }
+    .sos-alert-banner p  { opacity: 0.88; font-size: 0.95rem; margin: 0; }
+
+    .status-pill {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        padding: 0.5rem 1.25rem; border-radius: 50px;
+        font-weight: 700; font-size: 1.1rem;
+    }
+    .pill-pending  { background: #fff3cd; color: #856404; }
+    .pill-accepted { background: #d1e7dd; color: #0f5132; }
+    .pill-resolved { background: #e2e3e5; color: #41464b; }
+
+    .info-card {
+        background: white; border: 1px solid #e2e8f0;
+        border-radius: 12px; padding: 1.5rem;
+        margin-bottom: 1.25rem;
+    }
+    .info-card-title {
+        font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: #64748b; margin-bottom: 1rem;
+        display: flex; align-items: center; gap: 0.5rem;
+    }
+    .info-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 0.65rem 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-size: 0.85rem; color: #64748b; }
+    .info-value { font-size: 0.95rem; font-weight: 600; color: #1e293b; }
+
+    /* Timer */
+    .timer-block {
+        background: #fff5f5; border: 1px solid #fed7d7;
+        border-radius: 12px; padding: 1.5rem;
+        text-align: center; margin-bottom: 1.25rem;
+    }
+    .timer-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: #e53e3e; font-weight: 700; margin-bottom: 0.5rem; }
+    .timer-value { font-size: 3rem; font-weight: 900; color: #c53030; font-variant-numeric: tabular-nums; }
+    .timer-sub   { font-size: 0.8rem; color: #e57373; margin-top: 0.25rem; }
+
+    /* Map */
+    #sosMap { height: 280px; border-radius: 10px; margin-bottom: 0.75rem; }
+
+    /* Emergency contacts */
+    .contact-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .contact-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.9rem 1rem; background: #f8fafc;
+        border: 1px solid #e2e8f0; border-radius: 10px;
+    }
+    .contact-info { display: flex; align-items: center; gap: 0.75rem; }
+    .contact-avatar {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: #dbeafe; color: #1d4ed8;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem;
+    }
+    .contact-name  { font-weight: 600; font-size: 0.9rem; color: #1e293b; }
+    .contact-phone { font-size: 0.8rem; color: #64748b; }
+    .call-btn {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: #dcfce7; color: #16a34a;
+        border: none; cursor: pointer; font-size: 1rem;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.2s;
+    }
+    .call-btn:hover { background: #bbf7d0; }
+
+    /* Action buttons */
+    .action-row { display: flex; gap: 1rem; margin-top: 1.5rem; }
+    .btn-cancel-sos {
+        flex: 1; padding: 0.9rem; border: 2px solid #e53e3e;
+        border-radius: 10px; color: #e53e3e; background: white;
+        font-weight: 700; cursor: pointer; font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+    .btn-cancel-sos:hover { background: #fff5f5; }
+    .btn-back {
+        flex: 1; padding: 0.9rem; background: #1e293b;
+        border-radius: 10px; color: white; font-weight: 700;
+        text-decoration: none; text-align: center;
+        display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+        transition: opacity 0.2s;
+    }
+    .btn-back:hover { opacity: 0.85; color: white; }
+
+    /* Live indicator */
+    .live-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: #dcfce7; color: #16a34a; border-radius: 50px; padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 700; }
+    .live-dot-sm { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: blink 1.2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+</style>
+
+<div class="container sos-page">
+    <!-- Error state -->
+    {% if error %}
+    <div class="info-card" style="border-color:#fecaca;background:#fef2f2;">
+        <div class="info-card-title" style="color:#b91c1c;"><i class="fas fa-exclamation-circle"></i> Error</div>
+        <p style="color:#b91c1c;margin:0;">{{ error }}</p>
+        <a href="{% url 'user_dashboard' %}" class="btn-back" style="margin-top:1rem;display:inline-flex;width:auto;padding:0.6rem 1.5rem;">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+    {% else %}
+
+    <a href="{% url 'user_dashboard' %}" style="display:inline-flex;align-items:center;gap:0.4rem;color:#64748b;font-size:0.85rem;font-weight:500;text-decoration:none;margin-bottom:1.25rem;transition:color 0.2s;">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+
+    <!-- SOS Alert Banner -->
+    <div class="sos-alert-banner">
+        <div class="sos-icon">🆘</div>
+        <div>
+            <h2>SOS Alert Activated!</h2>
+            <p>Your emergency contacts and guardians have been notified. Help is on the way. Stay calm and stay visible.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left column -->
+        <div class="col-lg-7">
+            <!-- Status card -->
+            <div class="info-card">
+                <div class="info-card-title"><i class="fas fa-info-circle text-primary"></i> Alert Status <span class="live-badge ms-2"><span class="live-dot-sm"></span>Live</span></div>
+                <div id="status-display" style="margin-bottom:1rem;">
+                    {% if sos.status == "Pending" %}
+                        <span class="status-pill pill-pending"><i class="fas fa-clock"></i> Pending — Waiting for Guardian</span>
+                    {% elif sos.status == "Accepted" %}
+                        <span class="status-pill pill-accepted"><i class="fas fa-check-circle"></i> Accepted — Help is Coming</span>
+                    {% else %}
+                        <span class="status-pill pill-resolved"><i class="fas fa-check-double"></i> Resolved</span>
+                    {% endif %}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Alert ID</span>
+                    <span class="info-value">#{{ sos.id }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Triggered At</span>
+                    <span class="info-value">{{ sos.timestamp|localtime|date:"M d, Y H:i:s" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Vehicle</span>
+                    <span class="info-value">{{ sos.ride.vehicle_number }} ({{ sos.ride.vehicle_type }})</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Route</span>
+                    <span class="info-value">{{ sos.ride.source }} → {{ sos.ride.destination }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Location at Alert</span>
+                    <span class="info-value">{{ sos.location }}</span>
+                </div>
+                {% if sos.guardian %}
+                <div class="info-row">
+                    <span class="info-label">Assigned Guardian</span>
+                    <span class="info-value text-success"><i class="fas fa-shield-alt me-1"></i>{{ sos.guardian }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- SOS Map -->
+            <div class="info-card" style="padding-bottom:1rem;">
+                <div class="info-card-title"><i class="fas fa-map-marked-alt text-danger"></i> Your Last Known Location</div>
+                <div id="sosMap" role="application" aria-label="SOS location map"></div>
+                <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Location shown is where SOS was triggered. Live updates continue below.</small>
+            </div>
+        </div>
+
+        <!-- Right column -->
+        <div class="col-lg-5">
+            <!-- Timer -->
+            <div class="timer-block">
+                <div class="timer-label"><i class="fas fa-clock me-1"></i> Time Since Alert</div>
+                <div class="timer-value" id="elapsedTimer">00:00</div>
+                <div class="timer-sub">Guardians typically respond within 2 minutes</div>
+            </div>
+
+            <!-- Emergency Contacts -->
+            <div class="info-card">
+                <div class="info-card-title"><i class="fas fa-phone-alt text-success"></i> Emergency Contacts</div>
+                <div class="contact-list">
+                    <div class="contact-item">
+                        <div class="contact-info">
+                            <div class="contact-avatar" style="background:#fde8e8;color:#e53e3e;"><i class="fas fa-phone"></i></div>
+                            <div><div class="contact-name">Police</div><div class="contact-phone">100</div></div>
+                        </div>
+                        <a href="tel:100"><button class="call-btn" style="background:#fde8e8;color:#e53e3e;"><i class="fas fa-phone"></i></button></a>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-info">
+                            <div class="contact-avatar" style="background:#fef9c3;color:#ca8a04;"><i class="fas fa-ambulance"></i></div>
+                            <div><div class="contact-name">Ambulance</div><div class="contact-phone">108</div></div>
+                        </div>
+                        <a href="tel:108"><button class="call-btn" style="background:#fef9c3;color:#ca8a04;"><i class="fas fa-phone"></i></button></a>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-info">
+                            <div class="contact-avatar"><i class="fas fa-user-friends"></i></div>
+                            <div><div class="contact-name">Your Emergency Contact</div><div class="contact-phone">{{ sos.ride.commuter.emergency_contact }}</div></div>
+                        </div>
+                        <a href="tel:{{ sos.ride.commuter.emergency_contact }}" aria-label="Call your emergency contact"><button class="call-btn" aria-label="Call your emergency contact"><i class="fas fa-phone"></i></button></a>
+                    </div>
+                    <div class="contact-item">
+                        <div class="contact-info">
+                            <div class="contact-avatar" style="background:#ede9fe;color:#7c3aed;"><i class="fas fa-female"></i></div>
+                            <div><div class="contact-name">Women's Helpline</div><div class="contact-phone">1091</div></div>
+                        </div>
+                        <a href="tel:1091"><button class="call-btn" style="background:#ede9fe;color:#7c3aed;"><i class="fas fa-phone"></i></button></a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Safety Tips -->
+            <div class="info-card" style="background:#f0fdf4;border-color:#bbf7d0;">
+                <div class="info-card-title" style="color:#15803d;"><i class="fas fa-shield-heart"></i> Stay Safe — Do This Now</div>
+                <ul style="list-style:none;display:flex;flex-direction:column;gap:0.6rem;">
+                    <li style="font-size:0.88rem;color:#166534;display:flex;align-items:flex-start;gap:0.5rem;"><i class="fas fa-check-circle mt-1" style="color:#16a34a;flex-shrink:0;"></i> Stay in a public, well-lit area</li>
+                    <li style="font-size:0.88rem;color:#166534;display:flex;align-items:flex-start;gap:0.5rem;"><i class="fas fa-check-circle mt-1" style="color:#16a34a;flex-shrink:0;"></i> Make noise, draw attention if threatened</li>
+                    <li style="font-size:0.88rem;color:#166534;display:flex;align-items:flex-start;gap:0.5rem;"><i class="fas fa-check-circle mt-1" style="color:#16a34a;flex-shrink:0;"></i> Try to exit the vehicle if safe to do so</li>
+                    <li style="font-size:0.88rem;color:#166534;display:flex;align-items:flex-start;gap:0.5rem;"><i class="fas fa-check-circle mt-1" style="color:#16a34a;flex-shrink:0;"></i> Share your live location with a trusted person</li>
+                </ul>
+            </div>
+
+            <!-- Actions -->
+            <div class="action-row">
+                <a href="{% url 'user_dashboard' %}" class="btn-back"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <button class="btn-cancel-sos" onclick="confirmCancel()"><i class="fas fa-times me-1"></i> I'm Safe</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+{% if sos %}
+// ── Timer ─────────────────────────────────────────────
+const alertTime = new Date("{{ sos.timestamp|date:'Y-m-d' }}T{{ sos.timestamp|date:'H:i:s' }}");
+function updateTimer() {
+    const elapsed = Math.floor((Date.now() - alertTime.getTime()) / 1000);
+    const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const s = (elapsed % 60).toString().padStart(2, '0');
+    document.getElementById('elapsedTimer').textContent = m + ':' + s;
+}
+updateTimer();
+setInterval(updateTimer, 1000);
+
+// ── Map ───────────────────────────────────────────────
+const sosLat = {{ sos.ride.current_lat|default:"28.6139" }};
+const sosLng = {{ sos.ride.current_lng|default:"77.2090" }};
+
+const sosMap = L.map('sosMap').setView([sosLat, sosLng], 15);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO'
+}).addTo(sosMap);
+
+const redIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:20px;height:20px;background:#e53e3e;border:3px solid white;border-radius:50%;box-shadow:0 0 0 6px rgba(229,62,62,0.25);animation:bangPulse 2s infinite;"></div>',
+    iconSize: [20, 20], iconAnchor: [10, 10]
+});
+L.marker([sosLat, sosLng], { icon: redIcon })
+    .addTo(sosMap)
+    .bindPopup('<b>SOS Location</b><br>Alert triggered here')
+    .openPopup();
+L.circle([sosLat, sosLng], { radius: 150, color: '#e53e3e', fillOpacity: 0.1, weight: 1 }).addTo(sosMap);
+
+// ── Live Status Polling (P2.8) ───────────────────────
+function pollStatus() {
+    fetch("{% url 'sos_status' sos.id %}?ajax=1")
+        .then(r => r.json())
+        .then(data => {
+            const el = document.getElementById('status-display');
+            if (data.status === 'Accepted') {
+                el.innerHTML = '<span class="status-pill pill-accepted"><i class="fas fa-check-circle"></i> Accepted — Help is Coming</span>';
+            } else if (data.status === 'Resolved') {
+                el.innerHTML = '<span class="status-pill pill-resolved"><i class="fas fa-check-double"></i> Resolved</span>';
+                clearInterval(pollInterval);
+            } else if (data.status === 'Declined') {
+                el.innerHTML = '<span class="status-pill" style="background:#fef2f2;color:#b91c1c;"><i class="fas fa-times-circle"></i> Declined — Please call emergency services</span>';
+                clearInterval(pollInterval);
+            }
+        })
+        .catch(() => {});
+}
+const pollInterval = setInterval(pollStatus, 5000);
+pollStatus();
+
+// ── Cancel Confirmation ───────────────────────────────
+function confirmCancel() {
+    if (confirm("Mark yourself as safe? This will not cancel the SOS — please inform your guardian as well.")) {
+        window.location.href = "{% url 'user_dashboard' %}";
+    }
+}
+{% endif %}
+</script>
+{% endblock %}

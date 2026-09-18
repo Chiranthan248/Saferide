@@ -1,0 +1,540 @@
+{% extends 'user/base.html' %}
+{% load tz %}
+
+{% block content %}
+<style>
+    /* The dashboard already presents the primary SOS action; avoid a duplicate control. */
+    .sos-btn-floating { display: none; }
+    .sos-btn {
+        width: 132px;
+        height: 132px;
+        border-radius: 50%;
+        background: var(--danger-color);
+        color: white;
+        font-size: 1.55rem;
+        font-weight: bold;
+        border: 6px solid rgba(229, 62, 62, 0.2);
+        box-shadow: 0 10px 25px rgba(229, 62, 62, 0.4);
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    .sos-btn:hover { transform: scale(1.05); box-shadow: 0 15px 35px rgba(229, 62, 62, 0.5); }
+    .sos-btn:active { transform: scale(0.95); }
+    .sos-btn > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: .35rem;
+        line-height: 1;
+    }
+    .sos-btn i { display: block; font-size: 2.2rem; margin: 0; }
+
+    /* Keep the right rail content-sized instead of stretching it to the map height. */
+    .dashboard-side { align-self: flex-start; }
+    .dashboard-side .card-body { padding: 1.15rem !important; }
+    .dashboard-side .guardian-contact { padding: .7rem; margin-bottom: .5rem; }
+    .dashboard-side .guardian-icon { width:34px; height:34px; margin-right:.7rem; font-size:1rem; }
+    .dashboard-side .dash-section-title { font-size:1rem; margin-bottom:.65rem; }
+
+    .dash-section-title {
+        color: var(--dark-color); font-weight: 600; font-size: 1.1rem;
+        margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .status-badge {
+        background-color: #e6fffa; color: #319795;
+        padding: 0.25rem 0.75rem; border-radius: 2rem; font-size: 0.85rem; font-weight: 600;
+    }
+    .guardian-contact {
+        display: flex; align-items: center; padding: 1rem;
+        border: 1px solid var(--border-color); border-radius: 0.5rem;
+        margin-bottom: 0.75rem; transition: background 0.2s;
+    }
+    .guardian-contact:hover { background: var(--light-color); }
+    .guardian-icon {
+        width: 40px; height: 40px; border-radius: 50%;
+        background: var(--primary-light); color: var(--primary-color);
+        display: flex; align-items: center; justify-content: center;
+        margin-right: 1rem; font-size: 1.2rem;
+    }
+    /* Live Map */
+    #rideMap { height: 260px; width: 100%; border-radius: 0.5rem; z-index: 1; }
+    /* Risk widget */
+    .risk-widget {
+        border-radius: 0.5rem; padding: 0.75rem 1rem;
+        display: flex; align-items: center; gap: 0.75rem;
+        font-weight: 600; font-size: 1rem; margin-top: 0.75rem;
+    }
+    .risk-low    { background: #e6fffa; color: #319795; }
+    .risk-medium { background: #fffbeb; color: #b45309; }
+    .risk-high   { background: #fff5f5; color: #c53030; }
+</style>
+
+<div class="container mt-4 mb-5">
+    <!-- Header Area -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-0" style="font-weight: 700; color: var(--dark-color); letter-spacing: -0.5px;">Safety Dashboard</h2>
+            <p class="text-muted mb-0">Monitor your ride and stay connected.</p>
+        </div>
+    </div>
+
+    <!-- SOS Priority Row -->
+    <div class="row mb-4">
+        <div class="col-12 text-center py-3 bg-white rounded-3 shadow-sm border border-light">
+            <button class="btn sos-btn" id="triggerSos" aria-label="Trigger SOS emergency alert">
+                <div>
+                    <i class="fa-solid fa-bell"></i><span>SOS</span>
+                </div>
+            </button>
+            <p class="text-muted mt-3 mb-0 small"><i class="fa-solid fa-circle-info me-1"></i> Press to instantly alert guardians and authorities</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Active Ride Section -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="dash-section-title"><i class="fa-solid fa-car text-primary"></i> Current Journey</h5>
+                    
+                    {% if active_ride %}
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="status-badge"><i class="fa-solid fa-circle text-success" style="font-size: 8px; vertical-align: middle;"></i> Ride Active</span>
+                        <span class="text-muted small">Started: {{ active_ride.start_time|localtime|date:"M d, Y, h:i A" }}</span>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded">
+                                <span class="d-block text-muted small text-uppercase">Vehicle Details</span>
+                                <strong class="fs-5 d-block text-dark">{{ active_ride.vehicle_number }}</strong>
+                                <span class="text-secondary">{{ active_ride.vehicle_type }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded position-relative">
+                                <div class="timeline border-start border-2 border-primary ms-2 ps-3 pt-1 pb-1">
+                                    <div class="mb-2 position-relative">
+                                        <i class="fa-solid fa-circle position-absolute text-primary" style="left: -22px; top: 4px; font-size: 10px; background: white;"></i>
+                                        <span class="d-block text-muted small">Origin</span>
+                                        <strong>{{ active_ride.source }}</strong>
+                                    </div>
+                                    <div class="position-relative">
+                                        <i class="fa-solid fa-location-dot position-absolute text-danger" style="left: -22px; top: 4px; font-size: 12px; background: white;"></i>
+                                        <span class="d-block text-muted small">Destination</span>
+                                        <strong>{{ active_ride.destination }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- End Ride Button (P2.2) -->
+                    <div class="text-center mt-3">
+                        <form method="POST" action="{% url 'end_ride' %}" id="endRideForm">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger px-4 py-2" id="endRideBtn" aria-label="End current ride">
+                                <i class="fa-solid fa-flag-checkered me-2"></i>End Journey
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <div class="mb-3">
+                            <i class="fa-solid fa-shield-halved text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
+                        </div>
+                        <p class="text-muted">You don't have any active rides at the moment.</p>
+                        <a href="{% url 'start_ride' %}" class="btn btn-primary px-4 py-2 shadow-sm"><i class="fa-solid fa-plus me-2"></i> Start Tracking Ride</a>
+                    </div>
+                    {% endif %}
+
+                    {% if active_ride %}
+                    <!-- Live Leaflet Map -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="fw-semibold text-muted"><i class="fa-solid fa-location-crosshairs me-1 text-primary"></i>Live Location</small>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary" id="simRideBtn" style="font-size: 0.7rem; padding: 0.15rem 0.5rem; margin-right: 10px;">
+                                    <i class="fas fa-play me-1"></i>Simulate Ride
+                                </button>
+                                <small class="text-muted" id="locationDetails">Acquiring GPS signal...</small>
+                            </div>
+                        </div>
+                        <div id="rideMap" role="application" aria-label="Live journey map"></div>
+                        <!-- Risk Probability Widget -->
+                        <div id="riskWidget" class="risk-widget risk-low" style="display:none;">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span id="riskText">Analysing area safety...</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Guardians & Quick Info -->
+        <div class="col-lg-4 dashboard-side">
+            <!-- Emergency Contacts (P2.1 — real data) -->
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="dash-section-title mb-0"><i class="fa-solid fa-user-group text-primary"></i> Emergency Contacts</h5>
+                    </div>
+                    
+                    <p class="text-muted small mb-3">These contacts are alerted when SOS is pressed.</p>
+                    
+                    <!-- Primary emergency contact from commuter profile -->
+                    <div class="guardian-contact" style="border-left: 3px solid #2563eb;">
+                        <div class="guardian-icon"><i class="fa-solid fa-star"></i></div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0 text-dark">Primary Contact</h6>
+                            <small class="text-muted">{{ commuter.emergency_contact }}</small>
+                        </div>
+                        <a href="tel:{{ commuter.emergency_contact }}" class="btn btn-sm btn-light border text-primary rounded-circle" style="width:35px; height:35px; padding: 5px 0;" aria-label="Call primary contact"><i class="fa-solid fa-phone"></i></a>
+                    </div>
+                    
+                    <!-- Trusted contacts from DB -->
+                    {% for contact in trusted_contacts %}
+                    <div class="guardian-contact">
+                        <div class="guardian-icon"><i class="fa-solid fa-user"></i></div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0 text-dark">{{ contact.name }}</h6>
+                            <small class="text-muted">{{ contact.phone }} · {{ contact.relationship }}</small>
+                        </div>
+                        <a href="tel:{{ contact.phone }}" class="btn btn-sm btn-light border text-primary rounded-circle" style="width:35px; height:35px; padding: 5px 0;" aria-label="Call {{ contact.name }}"><i class="fa-solid fa-phone"></i></a>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted small py-2">
+                        <i class="fa-solid fa-user-plus me-1"></i> No trusted contacts added yet.
+                    </div>
+                    {% endfor %}
+
+                    <div class="text-center mt-3">
+                        <a href="{% url 'manage_contacts' %}" class="text-primary small fw-semibold text-decoration-none">Manage Emergency Contacts <i class="fa-solid fa-arrow-right ms-1"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- De-escalation Tools -->
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-body p-4">
+                    <h5 class="dash-section-title mb-3"><i class="fa-solid fa-shield-heart text-primary"></i> De-escalation Tools</h5>
+                    <p class="text-muted small mb-3">Use these tools if you feel uncomfortable but are not in immediate danger.</p>
+                    <button class="btn btn-outline-primary w-100 mb-2 text-start" id="triggerFakeCall">
+                        <i class="fa-solid fa-phone-volume me-2"></i> Trigger Fake Call (10s delay)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Incident Reporting Form -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <h5 class="dash-section-title mb-3"><i class="fa-solid fa-triangle-exclamation text-danger"></i> Report an Incident</h5>
+                    <p class="text-muted small mb-3">Incident data helps identify unsafe routes for all commuters.</p>
+                    <div id="incidentFeedback" class="alert d-none" role="alert"></div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Incident Type</label>
+                        <select class="form-select form-select-sm" id="incidentType">
+                            <option value="Harassment">Harassment</option>
+                            <option value="Theft">Theft</option>
+                            <option value="Suspicious Activity">Suspicious Activity</option>
+                            <option value="Unsafe Route">Unsafe Route</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description</label>
+                        <textarea class="form-control form-control-sm" id="incidentDesc" rows="3" placeholder="Briefly describe what happened..."></textarea>
+                    </div>
+                    <button class="btn btn-danger w-100" id="submitIncidentBtn">
+                        <i class="fa-solid fa-paper-plane me-2"></i>Submit Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fake Call Fullscreen Overlay -->
+<div id="fakeCallScreen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #1a1a1a; z-index: 9999; flex-direction: column; align-items: center; justify-content: flex-start; color: white; padding-top: 15vh;">
+    <div style="font-size: 1.2rem; color: #a0a0a0;" id="fakeCallStatus">Incoming Call...</div>
+    <div style="font-size: 2.5rem; font-weight: bold; margin-top: 10px;">Dad (Home)</div>
+    <div style="font-size: 1.2rem; color: #a0a0a0; margin-top: 5px;">Mobile</div>
+    
+    <div style="margin-top: auto; margin-bottom: 15vh; display: flex; gap: 60px; width: 100%; justify-content: center;">
+        <div class="text-center">
+            <button id="declineCall" style="width: 75px; height: 75px; border-radius: 50%; background-color: #ff3b30; color: white; border: none; font-size: 2rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4);">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+            <div style="margin-top: 10px; font-size: 0.9rem;">Decline</div>
+        </div>
+        <div class="text-center">
+            <button id="acceptCall" style="width: 75px; height: 75px; border-radius: 50%; background-color: #34c759; color: white; border: none; font-size: 2rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(52, 199, 89, 0.4); animation: pulse 1.5s infinite;">
+                <i class="fa-solid fa-phone"></i>
+            </button>
+            <div style="margin-top: 10px; font-size: 0.9rem;">Accept</div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.7); }
+        70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(52, 199, 89, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
+    }
+</style>
+
+<!-- Leaflet CSS + JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ─── Shared state ────────────────────────────────────────────────
+let currentLat = null;
+let currentLng = null;
+
+{% if active_ride %}
+// ─── Leaflet Map ─────────────────────────────────────────────────
+const rideMap = L.map('rideMap', { zoomControl: true }).setView([28.6139, 77.2090], 14);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO'
+}).addTo(rideMap);
+
+let userMarker = null;
+const rideIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:16px;height:16px;background:#2b6cb0;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+    iconSize: [16, 16],
+    iconAnchor: [8, 8]
+});
+
+function updateRiskWidget(lat, lng) {
+    const hour = new Date().getHours();
+    fetch(`/analytics/api/incident-probability/?lat=${lat}&lng=${lng}&hour=${hour}`)
+        .then(r => r.json())
+        .then(data => {
+            const widget = document.getElementById('riskWidget');
+            const text   = document.getElementById('riskText');
+            widget.style.display = 'flex';
+            widget.className = 'risk-widget risk-' + data.risk_level.toLowerCase();
+            text.textContent = `${data.risk_level} Risk Area — ${data.probability}% incident probability`;
+        })
+        .catch(() => {});
+}
+
+// ─── Geolocation Tracking ─────────────────────────────────────────
+const locDetails = document.getElementById('locationDetails');
+
+if ("geolocation" in navigator) {
+    navigator.geolocation.watchPosition(
+        function(pos) {
+            currentLat = pos.coords.latitude;
+            currentLng = pos.coords.longitude;
+            const acc  = Math.round(pos.coords.accuracy);
+
+            locDetails.textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}  (±${acc}m)`;
+
+            // Move/create marker
+            if (!userMarker) {
+                userMarker = L.marker([currentLat, currentLng], { icon: rideIcon }).addTo(rideMap);
+                // Draw accuracy circle
+                L.circle([currentLat, currentLng], { radius: acc, color: '#2b6cb0', fillOpacity: 0.08, weight: 1 }).addTo(rideMap);
+            } else {
+                userMarker.setLatLng([currentLat, currentLng]);
+            }
+            rideMap.panTo([currentLat, currentLng]);
+
+            // Sync to backend
+            fetch("{% url 'update_location' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat: currentLat, lng: currentLng })
+            }).catch(() => {});
+
+            // Update risk every 30 s of movement
+            updateRiskWidget(currentLat, currentLng);
+        },
+        function(err) {
+            locDetails.textContent = 'GPS signal lost — please enable location permissions.';
+            console.warn('Geolocation error:', err);
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 8000 }
+    );
+// Initial risk fetch with default Delhi coords
+    updateRiskWidget(28.6139, 77.2090);
+    
+    // Simulate Ride Logic
+    const route = [
+        [28.6139, 77.2090], [28.6150, 77.2100], [28.6165, 77.2115], 
+        [28.6180, 77.2130], [28.6200, 77.2150], [28.6225, 77.2175]
+    ];
+    let simIndex = 0;
+    let simInterval;
+    
+    document.getElementById('simRideBtn').addEventListener('click', function() {
+        if (this.innerText.includes('Simulate')) {
+            this.innerHTML = '<i class="fas fa-stop me-1"></i>Stop Sim';
+            this.classList.replace('btn-outline-primary', 'btn-danger');
+            
+            simInterval = setInterval(() => {
+                if (simIndex >= route.length) simIndex = 0;
+                
+                currentLat = route[simIndex][0];
+                currentLng = route[simIndex][1];
+                const acc = 15;
+                
+                locDetails.textContent = `SIMULATED: ${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`;
+                
+                if (!userMarker) {
+                    userMarker = L.marker([currentLat, currentLng], { icon: rideIcon }).addTo(rideMap);
+                } else {
+                    userMarker.setLatLng([currentLat, currentLng]);
+                }
+                rideMap.panTo([currentLat, currentLng]);
+                
+                fetch("{% url 'update_location' %}", {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lat: currentLat, lng: currentLng })
+                }).catch(() => {});
+                
+                updateRiskWidget(currentLat, currentLng);
+                simIndex++;
+            }, 3000); // move every 3s
+        } else {
+            this.innerHTML = '<i class="fas fa-play me-1"></i>Simulate Ride';
+            this.classList.replace('btn-danger', 'btn-outline-primary');
+            clearInterval(simInterval);
+            locDetails.textContent = 'Simulation stopped.';
+        }
+    });
+
+} else {
+    locDetails.textContent = 'Geolocation not supported by this browser.';
+}
+{% endif %}
+
+// ─── SOS Button ───────────────────────────────────────────────────
+document.getElementById('triggerSos').addEventListener('click', function() {
+    this.innerHTML = '<div><i class="fa-solid fa-spinner fa-spin"></i><span style="font-size:1rem">SENDING...</span></div>';
+    this.disabled  = true;
+    const self = this;
+
+    fetch("{% url 'trigger_sos' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ location: currentLat ? `${currentLat},${currentLng}` : 'Unknown' })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.href = "{% url 'sos_status' 0 %}".replace('0', data.sos_id);
+        } else {
+            alert(data.message || 'SOS failed. Please call emergency services directly.');
+            self.innerHTML = '<div><i class="fa-solid fa-bell"></i><span>SOS</span></div>';
+            self.disabled  = false;
+        }
+    })
+    .catch(() => {
+        alert('Network error. Please call emergency services directly.');
+        self.innerHTML = '<div><i class="fa-solid fa-bell"></i><span>SOS</span></div>';
+        self.disabled  = false;
+    });
+});
+
+// ─── Incident Reporting ───────────────────────────────────────────
+document.getElementById('submitIncidentBtn').addEventListener('click', function() {
+    const type = document.getElementById('incidentType').value;
+    const desc = document.getElementById('incidentDesc').value.trim();
+    const fb   = document.getElementById('incidentFeedback');
+
+    if (!desc) {
+        fb.className = 'alert alert-warning';
+        fb.textContent = 'Please add a description before submitting.';
+        return;
+    }
+    if (!currentLat) {
+        fb.className = 'alert alert-warning';
+        fb.textContent = 'Location not available yet. Please allow GPS access and try again.';
+        return;
+    }
+
+    this.disabled = true;
+    this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Submitting...';
+
+    fetch("{% url 'report_incident' %}", {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ incident_type: type, description: desc, lat: currentLat, lng: currentLng })
+    })
+    .then(r => r.json())
+    .then(data => {
+        fb.className = data.status === 'success' ? 'alert alert-success' : 'alert alert-danger';
+        fb.textContent = data.message;
+        if (data.status === 'success') {
+            document.getElementById('incidentDesc').value = '';
+        }
+    })
+    .catch(() => {
+        fb.className = 'alert alert-danger';
+        fb.textContent = 'Network error. Please try again.';
+    })
+    .finally(() => {
+        this.disabled = false;
+        this.innerHTML = '<i class="fa-solid fa-paper-plane me-2"></i>Submit Report';
+    });
+});
+
+// ─── Fake Call Logic ──────────────────────────────────────────────
+document.getElementById('triggerFakeCall').addEventListener('click', function() {
+    this.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Initiating in 10s...';
+    this.disabled  = true;
+    setTimeout(() => {
+        document.getElementById('fakeCallScreen').style.display = 'flex';
+        this.innerHTML = '<i class="fa-solid fa-phone-volume me-2"></i> Trigger Fake Call (10s delay)';
+        this.disabled  = false;
+    }, 10000);
+});
+
+document.getElementById('declineCall').addEventListener('click', function() {
+    document.getElementById('fakeCallScreen').style.display = 'none';
+});
+
+document.getElementById('acceptCall').addEventListener('click', function() {
+    const statusEl  = document.getElementById('fakeCallStatus');
+    const declineBtn = document.getElementById('declineCall');
+    statusEl.innerText = '00:01';
+    this.style.animation = 'none';
+    this.style.backgroundColor = '#6c757d';
+    this.innerHTML = '<i class="fa-solid fa-microphone-slash"></i>';
+    declineBtn.style.transform = 'translateX(65px)';
+    this.style.display = 'none';
+
+    let seconds = 1;
+    const callTimer = setInterval(() => {
+        seconds++;
+        const m = Math.floor(seconds/60).toString().padStart(2,'0');
+        const s = (seconds%60).toString().padStart(2,'0');
+        statusEl.innerText = `${m}:${s}`;
+    }, 1000);
+
+    declineBtn.onclick = function() {
+        clearInterval(callTimer);
+        document.getElementById('fakeCallScreen').style.display = 'none';
+        statusEl.innerText = 'Incoming Call...';
+        declineBtn.style.transform = 'none';
+        const acceptBtn = document.getElementById('acceptCall');
+        acceptBtn.style.display = 'flex';
+        acceptBtn.style.animation = 'pulse 1.5s infinite';
+        acceptBtn.style.backgroundColor = '#34c759';
+        acceptBtn.innerHTML = '<i class="fa-solid fa-phone"></i>';
+    };
+});
+</script>
+{% endblock %}

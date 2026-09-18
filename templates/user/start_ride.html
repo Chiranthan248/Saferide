@@ -1,0 +1,341 @@
+{% extends 'user/base.html' %}
+
+{% block content %}
+<style>
+    .start-ride-page {
+        padding: 2rem 0 4rem;
+    }
+    .form-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+    }
+    .form-header {
+        background: #1e293b;
+        color: white;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .form-header h3 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 1.25rem;
+    }
+    .step-badge {
+        background: rgba(255,255,255,0.15);
+        padding: 0.35rem 0.8rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .form-body {
+        padding: 2rem;
+    }
+    .section-title {
+        color: #2563eb;
+        font-weight: 700;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .section-title::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: #e2e8f0;
+    }
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #334155;
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+    }
+    .form-control, .form-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: border-color 0.2s;
+        background-color: #f8fafc;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #2563eb;
+        background-color: white;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .hint-text {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.3rem;
+        display: block;
+    }
+    
+    .btn-location {
+        background: #f1f5f9;
+        color: #0f172a;
+        border: 1px solid #cbd5e1;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: background 0.2s;
+    }
+    .btn-location:hover {
+        background: #e2e8f0;
+    }
+
+    .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+        background: #f8fafc;
+    }
+    .toggle-info {
+        display: flex;
+        flex-direction: column;
+    }
+    .toggle-title {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.9rem;
+    }
+    .toggle-desc {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    
+    .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e2e8f0;
+    }
+    .btn-cancel {
+        padding: 0.75rem 1.5rem;
+        border: 1px solid #cbd5e1;
+        background: white;
+        color: #475569;
+        font-weight: 600;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: background 0.2s;
+    }
+    .btn-cancel:hover {
+        background: #f1f5f9;
+        color: #1e293b;
+    }
+    .btn-submit {
+        padding: 0.75rem 2rem;
+        background: #2563eb;
+        color: white;
+        border: none;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background 0.2s;
+    }
+    .btn-submit:hover {
+        background: #1d4ed8;
+    }
+
+    .tips-card {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .tips-title {
+        color: #166534;
+        font-weight: 700;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .tips-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .tips-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        font-size: 0.85rem;
+        color: #166534;
+    }
+    .tips-list i {
+        color: #22c55e;
+        margin-top: 0.15rem;
+    }
+</style>
+
+<div class="container start-ride-page">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="form-card">
+                <div class="form-header">
+                    <h3><i class="fas fa-car-side me-2"></i>Start New Ride</h3>
+                    <span class="step-badge">Active Tracking</span>
+                </div>
+                
+                <div class="form-body">
+                    <form method="post" id="rideForm">
+                        {% csrf_token %}
+                        
+                        <!-- Vehicle -->
+                        <div class="section-title"><i class="fas fa-car"></i> Vehicle Details</div>
+                        <div class="row g-3">
+                            <div class="col-md-6 form-group">
+                                <label for="vehicle_number">Vehicle Number</label>
+                                <input type="text" class="form-control" id="vehicle_number" name="vehicle_number" placeholder="e.g. DL01AB1234" required>
+                                <span class="hint-text">Enter the exact registration number</span>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="vehicle_type">Vehicle Type</label>
+                                <select class="form-select" id="vehicle_type" name="vehicle_type" required>
+                                    <option value="" selected disabled>Select Vehicle Type</option>
+                                    <option value="Car">Car</option>
+                                    <option value="Bike">Bike</option>
+                                    <option value="Auto">Auto Rickshaw</option>
+                                    <option value="Taxi">Taxi</option>
+                                    <option value="Bus">Bus</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Route -->
+                        <div class="section-title mt-4"><i class="fas fa-route"></i> Route Information</div>
+                        <div class="row g-3">
+                            <div class="col-md-6 form-group">
+                                <label for="source">Source</label>
+                                <input type="text" class="form-control" id="source" name="source" placeholder="Starting point" required>
+                                <div class="mt-2">
+                                    <button type="button" class="btn-location" id="useCurrentLocation">
+                                        <i class="fas fa-location-arrow"></i> Use Current GPS
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label for="destination">Destination</label>
+                                <input type="text" class="form-control" id="destination" name="destination" placeholder="Where are you going?" required>
+                            </div>
+                        </div>
+
+                        <!-- Safety -->
+                        <div class="section-title mt-4"><i class="fas fa-shield-alt"></i> Safety Protocols</div>
+                        
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-title">Live Tracking Enabled</span>
+                                <span class="toggle-desc">Your location will be actively monitored for hazard zones.</span>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="share_location" checked disabled>
+                            </div>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-info">
+                                <span class="toggle-title">Auto Check-ins</span>
+                                <span class="toggle-desc">Prompt me to verify safety if journey takes unusually long.</span>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoCheckIn" name="auto_checkin" checked>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="actions">
+                            <a href="{% url 'user_dashboard' %}" class="btn-cancel">Cancel</a>
+                            <button type="submit" class="btn-submit" id="submitBtn">
+                                <i class="fas fa-play"></i> Start Tracking Ride
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="tips-card">
+                <div class="tips-title"><i class="fas fa-lightbulb"></i> Journey Safety Checklist</div>
+                <ul class="tips-list">
+                    <li><i class="fas fa-check-circle"></i> Verify the vehicle number plate matches the app/cab details before boarding.</li>
+                    <li><i class="fas fa-check-circle"></i> Ensure your phone is charged and has active mobile data for GPS syncing.</li>
+                    <li><i class="fas fa-check-circle"></i> Once started, you can use the SOS or Fake Call features directly from the dashboard.</li>
+                </ul>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('useCurrentLocation').addEventListener('click', function() {
+        const btn = this;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Locating...';
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                document.getElementById('source').value = "Current Location (GPS Active)";
+                btn.innerHTML = '<i class="fas fa-check text-success"></i> Located';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-location-arrow"></i> Use Current GPS';
+                }, 2000);
+            }, function(error) {
+                alert("Unable to get your location. Please check your browser permissions.");
+                btn.innerHTML = '<i class="fas fa-location-arrow"></i> Use Current GPS';
+            });
+        } else {
+            alert("Geolocation is not supported by your browser.");
+            btn.innerHTML = '<i class="fas fa-location-arrow"></i> Use Current GPS';
+        }
+    });
+
+    document.getElementById('rideForm').addEventListener('submit', function(e) {
+        const vehicleNumber = document.getElementById('vehicle_number').value;
+        const btn = document.getElementById('submitBtn');
+        
+        if (!/^[A-Za-z]{2}\d{1,2}[A-Za-z]{0,2}\d{1,4}$/.test(vehicleNumber)) {
+            alert('Please enter a valid vehicle number (e.g. DL01AB1234)');
+            e.preventDefault();
+        } else {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
+            btn.disabled = true;
+        }
+    });
+</script>
+{% endblock %}

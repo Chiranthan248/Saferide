@@ -1,0 +1,336 @@
+{% extends "admin_app/base.html" %}
+{% load tz %}
+
+{% block content %}
+<style>
+    .analytics-card {
+        border: none;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+        box-shadow: 0 4px 24px rgba(58,134,255,0.08);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    .analytics-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 32px rgba(58,134,255,0.14);
+    }
+    .stat-card {
+        border-radius: 16px;
+        padding: 1.5rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: -30px; right: -30px;
+        width: 100px; height: 100px;
+        background: rgba(255,255,255,0.12);
+        border-radius: 50%;
+    }
+    .stat-card .icon { font-size: 2.2rem; opacity: 0.85; }
+    .stat-card .value { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+    .stat-card .label { font-size: 0.85rem; opacity: 0.85; font-weight: 500; margin-top: 0.25rem; }
+    .stat-primary { background: linear-gradient(135deg, #3a86ff 0%, #2667cc 100%); }
+    .stat-danger  { background: linear-gradient(135deg, #ff4d6d 0%, #c9184a 100%); }
+    .stat-success { background: linear-gradient(135deg, #52b788 0%, #2d6a4f 100%); }
+    .stat-warning { background: linear-gradient(135deg, #ffd166 0%, #ef9c12 100%); }
+
+    #admin-map { height: 380px; width: 100%; border-radius: 12px; z-index: 1; }
+
+    .sos-table thead th {
+        background: #f0f4ff;
+        color: #3a86ff;
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        border: none;
+        padding: 1rem;
+    }
+    .sos-table tbody tr {
+        transition: background 0.15s;
+    }
+    .sos-table tbody tr:hover { background: #f8fbff; }
+    .sos-table td { vertical-align: middle; padding: 0.9rem 1rem; border-color: #f0f4ff; }
+    .badge-pending  { background: #fff3cd; color: #856404; }
+    .badge-accepted { background: #d1e7dd; color: #0f5132; }
+    .badge-resolved { background: #e2e3e5; color: #41464b; }
+    .risk-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+    .risk-high   .risk-dot { background: #ff4d6d; }
+    .risk-medium .risk-dot { background: #ffd166; }
+    .risk-low    .risk-dot { background: #52b788; }
+</style>
+
+<!-- Page Title -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h3 class="fw-bold mb-1" style="color:#1a1a2e;">Analytics & Response Dashboard</h3>
+        <p class="text-muted mb-0">Real-time incident monitoring, hazard zones & SOS management</p>
+    </div>
+    <span class="badge bg-success px-3 py-2" id="liveIndicator">
+        <i class="fas fa-circle fa-xs me-1 blink"></i> Live
+    </span>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="stat-card stat-danger">
+            <div class="icon"><i class="fas fa-bell"></i></div>
+            <div class="value" id="stat-pending">0</div>
+            <div class="label">Pending SOS</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-card stat-primary">
+            <div class="icon"><i class="fas fa-car-side"></i></div>
+            <div class="value" id="stat-active">0</div>
+            <div class="label">Active Rides</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-card stat-warning">
+            <div class="icon"><i class="fas fa-map-marker-exclamation"></i></div>
+            <div class="value" id="stat-incidents">0</div>
+            <div class="label">Incidents Today</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-card stat-success">
+            <div class="icon"><i class="fas fa-check-circle"></i></div>
+            <div class="value" id="stat-resolved">0</div>
+            <div class="label">Resolved Today</div>
+        </div>
+    </div>
+</div>
+
+<!-- Map + Chart Row -->
+<div class="row g-4 mb-4">
+    <!-- Hazard Zone Map -->
+    <div class="col-lg-7">
+        <div class="analytics-card h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-map-marked-alt text-primary me-2"></i>Hazard Zone Map</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">K-Means Clustering</span>
+                </div>
+                <div id="admin-map"></div>
+                <div id="zone-legend" class="mt-3 d-flex gap-3 flex-wrap" style="font-size: 0.82rem; color: #666;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incident Trend Chart -->
+    <div class="col-lg-5">
+        <div class="analytics-card h-100">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-chart-line text-primary me-2"></i>Incident Trends</h5>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">Last 7 Days</span>
+                </div>
+                <canvas id="incidentChart"></canvas>
+            </div>
+        </div>
+        <!-- Risk by Type -->
+        <div class="analytics-card">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-chart-pie text-primary me-2"></i>Incidents by Type</h5>
+                <canvas id="typeChart" height="180"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active SOS Alerts Table -->
+<div class="analytics-card">
+    <div class="card-body p-0">
+        <div class="p-4 pb-2 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0"><i class="fas fa-exclamation-triangle text-danger me-2"></i>Active SOS Alerts</h5>
+            <span class="badge bg-danger" id="sos-count-badge">{{ sos_list|length }}</span>
+        </div>
+        {% if sos_list %}
+        <div class="table-responsive">
+            <table class="table sos-table mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Commuter</th>
+                        <th>Route</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sos in sos_list %}
+                    <tr>
+                        <td><strong>#{{ sos.id }}</strong></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <img src="https://ui-avatars.com/api/?name={{ sos.ride.commuter.user.username }}&background=ff4d6d&color=fff&size=32" class="rounded-circle" width="32" height="32">
+                                <span>{{ sos.ride.commuter.user.username }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ sos.ride.source }}</small>
+                            <i class="fas fa-arrow-right mx-1 text-primary" style="font-size:0.7rem;"></i>
+                            <small class="text-muted">{{ sos.ride.destination }}</small>
+                        </td>
+                        <td><small>{{ sos.location }}</small></td>
+                        <td>
+                            {% if sos.status == "Pending" %}
+                                <span class="badge badge-pending px-3 py-2 rounded-pill">⏳ Pending</span>
+                            {% elif sos.status == "Accepted" %}
+                                <span class="badge badge-accepted px-3 py-2 rounded-pill">✅ Accepted</span>
+                            {% else %}
+                                <span class="badge badge-resolved px-3 py-2 rounded-pill">✔ Resolved</span>
+                            {% endif %}
+                        </td>
+                        <td><small class="text-muted">{{ sos.timestamp|localtime|date:"M d, H:i" }}</small></td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'sos_details' sos.id %}" class="btn btn-sm btn-outline-primary rounded-pill" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if sos.status == "Pending" %}
+                                <form action="{% url 'accept_sos' sos.id %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-success rounded-pill" title="Accept"><i class="fas fa-check"></i></button>
+                                </form>
+                                <form action="{% url 'decline_sos' sos.id %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button class="btn btn-sm btn-danger rounded-pill" title="Decline"><i class="fas fa-times"></i></button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-shield-alt fa-3x text-success mb-3" style="opacity:0.4;"></i>
+            <p class="text-muted">No active SOS alerts. All commuters are currently safe.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Leaflet + Chart.js -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .blink { animation: blink 1.5s infinite; }
+</style>
+
+<script>
+// --- Stats from context ---
+document.getElementById('stat-pending').textContent = '{{ sos_list|length }}';
+document.getElementById('stat-active').textContent = '{{ active_ride_count }}';
+document.getElementById('stat-incidents').textContent = '{{ incidents_today }}';
+document.getElementById('stat-resolved').textContent = '{{ resolved_today }}';
+
+// --- Map ---
+const adminMap = L.map('admin-map').setView([28.6139, 77.2090], 12);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap &copy; CARTO'
+}).addTo(adminMap);
+
+// Load Hazard Zones from Analytics API
+fetch('/analytics/api/hazard-zones/')
+    .then(r => r.json())
+    .then(zones => {
+        const legend = document.getElementById('zone-legend');
+        zones.forEach(zone => {
+            const colors = { 'High': '#ff4d6d', 'Medium': '#ffd166', 'Low': '#52b788' };
+            const color = colors[zone.risk_level] || '#888';
+
+            L.circle([zone.lat, zone.lng], {
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.25,
+                radius: Math.max(200, zone.incident_count * 150),
+                weight: 2
+            }).addTo(adminMap)
+              .bindPopup(`<b>${zone.risk_level} Risk Zone</b><br>📍 ${zone.lat.toFixed(4)}, ${zone.lng.toFixed(4)}<br>🚨 Incidents: ${zone.incident_count}`);
+
+            legend.innerHTML += `<span><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};margin-right:4px;"></span>${zone.risk_level} Risk (${zone.incident_count} incidents)</span>`;
+        });
+
+        document.getElementById('stat-incidents').textContent = zones.reduce((s, z) => s + z.incident_count, 0);
+    });
+
+// --- Incident Trend Chart ---
+const trendCtx = document.getElementById('incidentChart').getContext('2d');
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        datasets: [{
+            label: 'Incidents',
+            data: [3, 7, 4, 9, 5, 12, 6],
+            borderColor: '#3a86ff',
+            backgroundColor: 'rgba(58,134,255,0.1)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#3a86ff',
+            pointRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { color: '#888' } },
+            x: { grid: { display: false }, ticks: { color: '#888' } }
+        }
+    }
+});
+
+// --- Incidents by Type Donut Chart ---
+const typeCtx = document.getElementById('typeChart').getContext('2d');
+new Chart(typeCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Harassment', 'Theft', 'Suspicious', 'Unsafe Route', 'Other'],
+        datasets: [{
+            data: [35, 20, 25, 12, 8],
+            backgroundColor: ['#ff4d6d','#ffd166','#3a86ff','#52b788','#adb5bd'],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        cutout: '70%',
+        plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12 } }
+        }
+    }
+});
+
+// Live stats — refresh from server every 30 seconds
+setInterval(() => {
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.text())
+        .then(html => {
+            // Parse updated stats from the re-rendered page
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            ['stat-pending', 'stat-active', 'stat-incidents', 'stat-resolved'].forEach(id => {
+                const el = doc.getElementById(id);
+                if (el) document.getElementById(id).textContent = el.textContent;
+            });
+        })
+        .catch(() => {});
+}, 30000);
+</script>
+{% endblock %}

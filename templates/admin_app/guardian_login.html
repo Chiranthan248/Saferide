@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardian Portal – SafeRide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; min-height: 100vh; display: flex; }
+        .auth-wrapper { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; width: 100%; }
+        .brand-panel {
+            background: linear-gradient(150deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 3rem; color: white; position: relative; overflow: hidden;
+        }
+        .brand-panel::before { content: ''; position: absolute; top: -60px; right: -60px; width: 280px; height: 280px; border-radius: 50%; background: rgba(99,102,241,0.12); }
+        .brand-panel::after  { content: ''; position: absolute; bottom: -80px; left: -40px; width: 320px; height: 320px; border-radius: 50%; background: rgba(16,185,129,0.08); }
+        .brand-icon { width: 72px; height: 72px; border-radius: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 1.5rem; z-index: 1; color: #818cf8; }
+        .brand-panel h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem; z-index: 1; }
+        .badge-guardian { background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; border-radius: 20px; padding: 0.3rem 0.9rem; font-size: 0.8rem; font-weight: 600; margin-bottom: 1rem; z-index: 1; }
+        .brand-panel p  { color: rgba(255,255,255,0.6); font-size: 0.95rem; max-width: 300px; text-align: center; z-index: 1; }
+        .guardian-powers { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1rem; z-index: 1; width: 100%; max-width: 300px; }
+        .power-item { display: flex; align-items: center; gap: 0.75rem; background: rgba(255,255,255,0.06); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.88rem; }
+        .power-item i { color: #818cf8; font-size: 1rem; width: 18px; text-align: center; }
+        .form-panel { background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 4rem; }
+        .form-box { width: 100%; max-width: 380px; }
+        .form-box h2 { font-size: 1.75rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; }
+        .form-box .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem; }
+        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.88rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+        .field { margin-bottom: 1.25rem; }
+        .field label { display: block; font-weight: 600; font-size: 0.82rem; color: #374151; margin-bottom: 0.35rem; }
+        .field-inner { position: relative; }
+        .field-inner i { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 0.9rem; }
+        .field input { width: 100%; padding: 0.8rem 0.9rem 0.8rem 2.5rem; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 0.92rem; font-family: 'Inter', sans-serif; color: #111827; background: #f9fafb; outline: none; transition: border-color 0.2s; }
+        .field input:focus { border-color: #6366f1; background: white; }
+        .submit-btn { width: 100%; padding: 0.85rem; background: linear-gradient(135deg, #4f46e5, #1e1b4b); color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: 'Inter', sans-serif; }
+        .submit-btn:hover { opacity: 0.9; }
+        .bottom-link { text-align: center; margin-top: 1.5rem; font-size: 0.88rem; color: #64748b; }
+        .bottom-link a { color: #4f46e5; font-weight: 600; text-decoration: none; }
+        .divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; }
+        .divider span { color: #cbd5e1; font-size: 0.8rem; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+        .commuter-link { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem; border: 1.5px solid #e5e7eb; border-radius: 8px; color: #374151; font-size: 0.88rem; font-weight: 600; text-decoration: none; transition: border-color 0.2s, color 0.2s; }
+        .commuter-link:hover { border-color: #4f46e5; color: #4f46e5; }
+        @media (max-width: 768px) { .auth-wrapper { grid-template-columns: 1fr; } .brand-panel { display: none; } .form-panel { padding: 2rem; } }
+    </style>
+</head>
+<body>
+<div class="auth-wrapper">
+    <div class="brand-panel">
+        <div class="brand-icon"><i class="fas fa-user-shield"></i></div>
+        <div class="badge-guardian">Guardian Portal</div>
+        <h1>Protect. Monitor. Respond.</h1>
+        <p>Guardian accounts have exclusive access to the real-time SOS management and analytics dashboard.</p>
+        <div class="guardian-powers">
+            <div class="power-item"><i class="fas fa-bell"></i> Receive and manage SOS alerts</div>
+            <div class="power-item"><i class="fas fa-map-marked-alt"></i> View hazard zone analytics map</div>
+            <div class="power-item"><i class="fas fa-chart-line"></i> Monitor incident trends</div>
+            <div class="power-item"><i class="fas fa-check-circle"></i> Accept, decline, resolve alerts</div>
+        </div>
+    </div>
+
+    <div class="form-panel">
+        <div class="form-box">
+            <h2>Guardian Sign In</h2>
+            <p class="subtitle">Access the guardian command centre</p>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert-error"><i class="fas fa-exclamation-circle"></i> {{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" action="{% url 'guardian_login' %}" id="guardianForm">
+                {% csrf_token %}
+                <div class="field">
+                    <label>Username</label>
+                    <div class="field-inner">
+                        <i class="fas fa-user-shield"></i>
+                        <input type="text" name="username" placeholder="Guardian username" required autofocus>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Password</label>
+                    <div class="field-inner">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" name="password" placeholder="Guardian password" required>
+                    </div>
+                </div>
+                <button type="submit" class="submit-btn" id="guardianBtn">
+                    <i class="fas fa-sign-in-alt"></i> Sign In to Guardian Portal
+                </button>
+            </form>
+
+            <div class="bottom-link">
+                Need a guardian account? <a href="{% url 'register_guardian' %}">Request access</a>
+            </div>
+
+            <div class="divider"><span>or</span></div>
+            <a href="{% url 'login' %}" class="commuter-link">
+                <i class="fas fa-user"></i> Commuter Login
+            </a>
+        </div>
+    </div>
+</div>
+<script>
+    document.getElementById('guardianForm').addEventListener('submit', function() {
+        const btn = document.getElementById('guardianBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+        btn.disabled = true;
+    });
+</script>
+</body>
+</html>

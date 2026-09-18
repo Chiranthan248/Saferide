@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account – SafeRide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f1f5f9; min-height: 100vh; display: flex; }
+        .auth-wrapper { display: grid; grid-template-columns: 1fr 1.4fr; min-height: 100vh; width: 100%; }
+        .brand-panel {
+            background: linear-gradient(150deg, #1e3a5f 0%, #0f2744 60%, #0a1a30 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 3rem; color: white; position: relative; overflow: hidden;
+        }
+        .brand-panel::before { content: ''; position: absolute; top: -80px; right: -80px; width: 300px; height: 300px; border-radius: 50%; background: rgba(59,130,246,0.12); }
+        .brand-panel::after  { content: ''; position: absolute; bottom: -100px; left: -60px; width: 350px; height: 350px; border-radius: 50%; background: rgba(139,92,246,0.1); }
+        .brand-icon { width: 72px; height: 72px; border-radius: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 1.5rem; z-index: 1; }
+        .brand-panel h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.75rem; z-index: 1; }
+        .brand-panel p  { color: rgba(255,255,255,0.65); font-size: 1rem; max-width: 300px; text-align: center; z-index: 1; }
+        .steps-list { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1.25rem; z-index: 1; width: 100%; max-width: 300px; }
+        .step-item { display: flex; align-items: flex-start; gap: 1rem; }
+        .step-num { min-width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; }
+        .step-text strong { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.15rem; }
+        .step-text span { color: rgba(255,255,255,0.55); font-size: 0.8rem; }
+
+        .form-panel { background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 4rem; overflow-y: auto; }
+        .form-box { width: 100%; max-width: 480px; }
+        .form-box h2 { font-size: 1.75rem; font-weight: 800; color: #0f172a; margin-bottom: 0.4rem; }
+        .form-box .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 2rem; }
+        .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.88rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+        .section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #2563eb; margin-bottom: 1rem; margin-top: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .section-title::after { content: ''; flex: 1; height: 1px; background: #e5e7eb; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .field { margin-bottom: 1.1rem; }
+        .field label { display: block; font-weight: 600; font-size: 0.82rem; color: #374151; margin-bottom: 0.35rem; }
+        .field-inner { position: relative; }
+        .field-inner i { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 0.9rem; }
+        .field input, .field textarea, .field select {
+            width: 100%; padding: 0.75rem 0.9rem 0.75rem 2.5rem;
+            border: 1.5px solid #e5e7eb; border-radius: 8px;
+            font-size: 0.9rem; font-family: 'Inter', sans-serif;
+            color: #111827; background: #f9fafb; outline: none;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .field textarea { padding-left: 2.5rem; resize: vertical; }
+        .field input:focus, .field textarea:focus, .field select:focus { border-color: #2563eb; background: white; }
+        .field.no-icon input, .field.no-icon textarea { padding-left: 0.9rem; }
+        .submit-btn { width: 100%; padding: 0.85rem; background: linear-gradient(135deg, #1d4ed8, #1e3a8a); color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s, transform 0.15s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-family: 'Inter', sans-serif; margin-top: 1.5rem; }
+        .submit-btn:hover { opacity: 0.92; transform: translateY(-1px); }
+        .bottom-link { text-align: center; margin-top: 1.25rem; font-size: 0.88rem; color: #64748b; }
+        .bottom-link a { color: #2563eb; font-weight: 600; text-decoration: none; }
+        .password-hint { font-size: 0.75rem; color: #94a3b8; margin-top: 0.3rem; }
+        @media (max-width: 900px) { .auth-wrapper { grid-template-columns: 1fr; } .brand-panel { display: none; } .form-panel { padding: 2rem; } }
+        @media (max-width: 480px) { .grid-2 { grid-template-columns: 1fr; } }
+        /* Keep authentication in the same night-mode system as SafeRide. */
+        body { background:#070b16; }.form-panel { background:radial-gradient(circle at 100% 0%,rgba(59,130,246,.14),transparent 28rem),#0b1220; }
+        .form-box h2 { color:#f8fafc; }.form-box .subtitle,.bottom-link { color:#94a3b8; }.field label { color:#cbd5e1; }
+        .field input,.field textarea,.field select { color:#f8fafc;background:rgba(2,6,23,.55);border-color:rgba(148,163,184,.22); }
+        .field input:focus,.field textarea:focus,.field select:focus { border-color:#60a5fa;background:rgba(2,6,23,.8); }.bottom-link a { color:#93c5fd; }
+    </style>
+</head>
+<body>
+<div class="auth-wrapper">
+    <div class="brand-panel">
+        <div class="brand-icon"><i class="fas fa-shield-alt"></i></div>
+        <h1>SafeRide</h1>
+        <p>Join thousands of commuters who travel with confidence and safety.</p>
+        <div class="steps-list">
+            <div class="step-item"><div class="step-num">1</div><div class="step-text"><strong>Create Your Account</strong><span>Fill in your details below</span></div></div>
+            <div class="step-item"><div class="step-num">2</div><div class="step-text"><strong>Start a Ride</strong><span>Log your vehicle and route</span></div></div>
+            <div class="step-item"><div class="step-num">3</div><div class="step-text"><strong>Ride Protected</strong><span>SOS alerts and risk monitoring active</span></div></div>
+        </div>
+    </div>
+
+    <div class="form-panel">
+        <div class="form-box">
+            <a href="{% url 'home' %}" style="display:inline-flex;align-items:center;gap:0.4rem;color:#64748b;font-size:0.82rem;font-weight:500;text-decoration:none;margin-bottom:1.5rem;transition:color 0.2s;">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            <h2>Create your account</h2>
+            <p class="subtitle">Get started with SafeRide — it's free</p>
+
+            {% if error %}
+            <div class="alert-error"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>
+            {% endif %}
+
+            <form method="POST" id="registerForm">
+                {% csrf_token %}
+
+                <div class="section-title">Account Details</div>
+                <div class="grid-2">
+                    <div class="field">
+                        <label>Username</label>
+                        <div class="field-inner">
+                            <i class="fas fa-user"></i>
+                            <input type="text" name="username" placeholder="Choose a username" required autofocus>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Email Address</label>
+                        <div class="field-inner">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" name="email" placeholder="you@example.com" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Password</label>
+                    <div class="field-inner">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" name="password" id="pw" placeholder="Create a strong password" required minlength="8">
+                    </div>
+                    <p class="password-hint">Minimum 8 characters</p>
+                </div>
+                <div class="field">
+                    <label>Confirm Password</label>
+                    <div class="field-inner">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" name="password2" id="pw2" placeholder="Re-enter your password" required minlength="8">
+                    </div>
+                    <p class="password-hint" id="pwMatch" style="color: #94a3b8;"></p>
+                </div>
+
+                <div class="section-title">Safety Information</div>
+                <div class="grid-2">
+                    <div class="field">
+                        <label>Phone Number</label>
+                        <div class="field-inner">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" name="phone" placeholder="+91 XXXXXXXXXX" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Emergency Contact</label>
+                        <div class="field-inner">
+                            <i class="fas fa-heart-pulse"></i>
+                            <input type="tel" name="emergency_contact" placeholder="Emergency phone" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Home Address</label>
+                    <div class="field-inner">
+                        <i class="fas fa-home" style="top:1.1rem;transform:none;"></i>
+                        <textarea name="address" rows="2" placeholder="Your home address" required></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="registerBtn">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </button>
+            </form>
+
+            <div class="bottom-link">
+                Already have an account? <a href="{% url 'login' %}">Sign in</a>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Client-side password match check
+    const pw = document.getElementById('pw');
+    const pw2 = document.getElementById('pw2');
+    const pwMatch = document.getElementById('pwMatch');
+
+    function checkMatch() {
+        if (!pw2.value) { pwMatch.textContent = ''; return; }
+        if (pw.value === pw2.value) {
+            pwMatch.textContent = '✓ Passwords match';
+            pwMatch.style.color = '#38a169';
+        } else {
+            pwMatch.textContent = '✗ Passwords do not match';
+            pwMatch.style.color = '#e53e3e';
+        }
+    }
+    pw.addEventListener('input', checkMatch);
+    pw2.addEventListener('input', checkMatch);
+
+    document.getElementById('registerForm').addEventListener('submit', function(e) {
+        if (pw.value !== pw2.value) {
+            e.preventDefault();
+            pwMatch.textContent = '✗ Passwords do not match';
+            pwMatch.style.color = '#e53e3e';
+            pw2.focus();
+            return;
+        }
+        if (pw.value.length < 8) {
+            e.preventDefault();
+            pwMatch.textContent = 'Password must be at least 8 characters';
+            pwMatch.style.color = '#e53e3e';
+            pw.focus();
+            return;
+        }
+        const btn = document.getElementById('registerBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating account...';
+        btn.disabled = true;
+    });
+</script>
+</body>
+</html>
